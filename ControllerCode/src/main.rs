@@ -71,7 +71,7 @@ fn main() -> std::io::Result<()>{
         // print!("5\n\r");
         // println!("Recieved reply {}, from {}", response, src);
 
-        sleep(Duration::from_millis(10));
+        // sleep(Duration::from_millis(10));
     }
 
     crossterm::terminal::disable_raw_mode()?;

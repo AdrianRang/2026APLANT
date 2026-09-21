@@ -11,7 +11,8 @@
 #define RIGHT 33
 #define WEAPON 2
 
-#define DRIVE_VALUE 180
+#define DRIVE_VALUE 140
+#define WEAPON_VALUE 180
 #define STOP_VALUE 95
 
 const char *ssid = "test";
@@ -37,15 +38,18 @@ double rightDuration = 0;
 double frontStart = -1;
 double frontDuration = 0;
 
+double circleStart = -1;
+double circleDuration = 0;
+
 void stopAll() {
   leftMotor.write(STOP_VALUE);
   rightMotor.write(STOP_VALUE);
-  weaponMotor.write(STOP_VALUE);
+  weaponMotor.writeMicroseconds(1000);
 
   frontStart = -1;
   frontDuration = 0;
 
-  digitalWrite(2, int(millis() / 100.0) % 2 == 0 ? HIGH : LOW);
+  // digitalWrite(2, int(millis() / 100.0) % 2 == 0 ? HIGH : LOW);
   // digitalWrite(2, LOW);
 }
 
@@ -58,16 +62,17 @@ void stop() {
   leftDuration = 0;
   rightStart = -1;
   rightDuration = 0;
+  circleStart = -1;
+  circleDuration = 0;
 
   leftMotor.write(STOP_VALUE);
   rightMotor.write(STOP_VALUE);
-  weaponMotor.write(STOP_VALUE);
 }
 
 void front() {
   Serial.println("front");
   leftMotor.write(DRIVE_VALUE);
-  rightMotor.write(DRIVE_VALUE);
+  rightMotor.write(-DRIVE_VALUE);
   
   backStart = -1;
   backDuration = 0;
@@ -75,6 +80,8 @@ void front() {
   leftDuration = 0;
   rightStart = -1;
   rightDuration = 0;
+  circleStart = -1;
+  circleDuration = 0;
 }
 
 void back() {
@@ -84,14 +91,16 @@ void back() {
   leftDuration = 0;
   rightStart = -1;
   rightDuration = 0;
+  circleStart = -1;
+  circleDuration = 0;
 
   leftMotor.write(-DRIVE_VALUE);
-  rightMotor.write(-DRIVE_VALUE);
+  rightMotor.write(DRIVE_VALUE);
 }
 
 void left() {
   leftMotor.write(-DRIVE_VALUE);
-  rightMotor.write(DRIVE_VALUE);
+  rightMotor.write(-DRIVE_VALUE);
 
   
   frontStart = -1;
@@ -100,13 +109,13 @@ void left() {
   backDuration = 0;
   rightStart = -1;
   rightDuration = 0;
+  circleStart = -1;
+  circleDuration = 0;
 }
 
 void right() {
-  frontStart = -1;
-  frontDuration = 0;
   leftMotor.write(DRIVE_VALUE);
-  rightMotor.write(-DRIVE_VALUE);
+  rightMotor.write(DRIVE_VALUE);
 
   
   frontStart = -1;
@@ -115,6 +124,28 @@ void right() {
   backDuration = 0;
   leftStart = -1;
   leftDuration = 0;
+  circleStart = -1;
+  circleDuration = 0;
+}
+
+void circle() {
+  leftMotor.write(DRIVE_VALUE/2);
+  rightMotor.write(DRIVE_VALUE);
+
+  
+  frontStart = -1;
+  frontDuration = 0;
+  backStart = -1;
+  backDuration = 0;
+  leftStart = -1;
+  leftDuration = 0;
+  rightStart = -1;
+  rightDuration = 0;
+}
+
+void spin() {
+  // weaponMotor.write(WEAPON_VALUE);
+  weaponMotor.writeMicroseconds(2000);
 }
 
 
@@ -130,9 +161,11 @@ void setup() {
 
   leftMotor.attach(LEFT);
   rightMotor.attach(RIGHT);
-  weaponMotor.attach(WEAPON);
+  weaponMotor.attach(WEAPON, 1000, 2000);
 
-  pinMode(2, OUTPUT);
+  weaponMotor.write(1000);
+
+  // pinMode(2, OUTPUT);
   pinMode(13, OUTPUT);
   pinMode(12, OUTPUT);
   digitalWrite(13, HIGH);
@@ -158,6 +191,7 @@ void loop() {
     right();
   } else {
     digitalWrite(2, active ? LOW : HIGH);
+    stop();
   }
 
   int packetSize = udp.parsePacket();
@@ -172,7 +206,7 @@ void loop() {
 
     if(packet.equals("LED")) {
       active = !active;
-      digitalWrite(2, active ? LOW : HIGH);
+      // digitalWrite(2, active ? LOW : HIGH);
     } else if (packet.startsWith("front")) {
       double time = packet.substring(String("front").length()).toDouble() * 1000;
       frontDuration = time == 0 ? 500 : time;
@@ -193,6 +227,22 @@ void loop() {
       rightDuration = time == 0 ? 500 : time;
       rightStart = millis();
       Serial.printf("Going right for %f seconds\n", rightDuration/1000);
+    } else if(packet.startsWith("circle")) {
+      double time = packet.substring(String("right").length()).toDouble() * 1000;
+      rightDuration = time == 0 ? 500 : time;
+      rightStart = millis();
+      Serial.printf("Going right for %f seconds\n", rightDuration/1000);
+    } else if(packet.startsWith("circle")) {
+      double time = packet.substring(String("circle").length()).toDouble() * 1000;
+      circleDuration = time == 0 ? 500 : time;
+      circleStart = millis();
+      Serial.printf("Going right for %f seconds\n", rightDuration/1000);
+    } else if(packet.startsWith("w")) {
+      weaponMotor.writeMicroseconds(packet.substring(1).toInt());
+    } else if(packet.startsWith("attack")) {
+      spin();
+    } else if(packet.startsWith("S")) {
+    weaponMotor.write(1000);
     } else if(packet.startsWith("s")) {
       stop();
       // servo.write(packet.substring(1).toInt());
